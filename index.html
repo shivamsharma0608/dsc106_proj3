@@ -211,12 +211,13 @@
     <h2>Design &amp; Process</h2>
 
     <h3>Motivation</h3>
-    <p>Climate change is one of the most consequential issues of our time, yet the raw model output from CMIP6 is inaccessible to most people. Our goal was to distill 250 years of climate projections into interactive graphics that make the stakes of different emission pathways immediately legible, without requiring any scientific background.</p>
-    <p>Our central question: <em>How does global mean temperature diverge across emission scenarios from 1850 through 2100, and which regions face the most extreme warming?</em></p>
+    <p>Climate change is consistently described as one of the defining challenges of our time, yet for most people it remains extremely abstract — a background concern rather than something they need to address actively. Terms like "1.5°C above pre-industrial levels" appear consistently in headlines, but it's easy to read and simply think that that doesn't sound like that much and it probably wouldn't affect them. It doesn't tell you what the difference between a moderate and a high-emissions future actually looks like on the ground, and at what rate climate change is becoming an issue for people right now rather than future generations.</p>
+    <p>Part of the problem is that existing climate data, while extraordinarily detailed, is locked in spaces that most poeple will never interact with on their own. CMIP6 contains thousands of model simulations spanning centuries of climate history and projection, yet accessing anything that CMIP6 is capable of requires navigating spaces online that simply aren't necessary for the average person. The knowledge exists; the accessibility does not.</p>
+    <p>By building two complementary interactive visualizations — a global time series and a spatial warming map — we hope to make it possible for anyone to directly explore what the planet's temperature trajectory looks like under different emissions scenarios, and to see concretely which regions bear the most extreme consequences. Seeing the SSP5-8.5 line pull away from SSP2-4.5 around 2040 and accelerate toward nearly 20°C by 2100, or watching the Arctic light up deep red on the map while the tropics stay pale yellow, is the kind of direct, comparative insight that simply reading a paragraph of text cannot replicate. Our central question was: how does global mean temperature diverge across emission scenarios from 1850 through 2100, and which regions face the most extreme warming?</p>
 
     <h3>Visual Encodings</h3>
-    <p>The time series uses position along a common y-axis to encode temperature, the most perceptually accurate channel for quantitative data. Each scenario uses both color and line dash so they are distinguishable without relying on color alone. The Paris Agreement reference lines at +1.5°C and +2.0°C give users an immediate policy anchor.</p>
-    <p>The spatial map encodes warming anomaly with a sequential yellow-orange-red color scale, chosen because all projected values are positive and the warm palette aligns intuitively with heat. Grid cells are rendered as correctly projected GeoJSON polygons so polar regions display without distortion. Country borders are overlaid to aid geographic orientation. We considered a country level choropleth but it would have hidden within-country variation (e.g., Arctic vs. temperate Canada).</p>
+    <p>The time series uses position along a common y-axis to encode temperature, the most perceptually common and accurate visual channel for quantitative data. Each scenario uses both color and line dash so they are distinguishable without relying on color alone. The Paris Agreement reference lines at +1.5°C and +2.0°C give users an immediate policy anchor.</p>
+    <p>The spatial map encodes warming anomaly with a sequential yellow-orange-red color scale, because all projected values are positive and the warm palette aligns intuitively with heat. Grid cells are rendered as correctly projected GeoJSON polygons so polar regions display with little distortion while remaining recognizable given standard map displays. Country borders are overlaid to aid geographic orientation. We considered a country level choropleth, but it would have hidden within-country variation and takes away from the more direct impact to specific viewers that is necessary when it comes to convincing people that climate change is a current issue.</p>
 
     <h3>Interaction Design</h3>
     <p>We included five interactions: (1) scenario toggles let users isolate pathways in the time series; (2) year-range sliders enable zooming into any time window; (3) hover tooltips provide exact values without permanent clutter; (4) the map's year buttons jump to key milestones (2030, 2050, 2070, 2100), making the acceleration of warming visible; (5) the map's scenario toggle lets users directly compare moderate vs. high-emission spatial patterns, a comparison the time series cannot show at the regional level. The most striking insight, that Arctic warming under SSP5-8.5 by 2100 exceeds 10°C while tropical regions stay under 4°C, only becomes apparent through the spatial map.</p>
@@ -225,7 +226,7 @@
     <p>Raw CMIP6 data was accessed via the NOAA public Google Cloud bucket using the IPSL CM6A LR model (member r1i1p1f1, grid gr). Monthly atmospheric temperature (variable: tas, table: Amon) was loaded using xarray, area-weighted by cosine of latitude, resampled to annual means, and converted from Kelvin to Celsius. For the spatial map, grid data was coarsened to 5° resolution and expressed as anomalies relative to the per-cell 1850–1900 baseline, keeping the CSV to around 400 KB suitable for GitHub Pages hosting.</p>
 
     <h3>Development Process</h3>
-    <p>The project was completed by a team of four. Data extraction and preprocessing in Python/xarray was handled by one member. Exploratory analysis including regional warming trajectories and compound risk scatter plots was completed by another. The D3.js visualization and page design was built by a third member, and the write up and checkpoint video were coordinated by the fourth. Total estimated effort: approximately 22–26 person-hours. The most time consuming aspects were data preprocessing and integrating the spatial map without breaking existing interactions.</p>
+    <p>The project was completed by a team of four. Data extraction and preprocessing in Python/xarray was handled by one member. Exploratory analysis including regional warming trajectories and compound risk scatter plots was completed by another. The D3.js visualization and page design was built by a third member, and the write up and checkpoint video were coordinated by the fourth. The most time consuming aspects were data preprocessing and integrating the spatial map without breaking existing interactions.</p>
   </div>
 </main>
 
@@ -754,7 +755,11 @@ window.addEventListener('load', initChart);
    SPATIAL MAP
    ═══════════════════════════════════════════════════════════════════ */
 const mapColorScale = d3.scaleSequential(d3.interpolateYlOrRd).domain([0, 10]);
-const mapSt = { scenario: 'ssp585', year: 2050, data: null, world: null, loaded: false, halfDeg: 2.5 };
+const mapSt = { 
+  scenario: 'ssp585', year: 2050, data: null, world: null, 
+  loaded: false, halfDeg: 2.5,
+  globalLo: 0, globalHi: 10 
+};
 
 async function loadMapData() {
   try {
@@ -778,6 +783,11 @@ async function loadMapData() {
     mapSt.data = spatialData;
     mapSt.world = world;
     mapSt.loaded = true;
+
+    const allVals = spatialData.map(d => d.anomaly).filter(isFinite).sort((a, b) => a - b);
+    mapSt.globalLo = 0;
+    mapSt.globalHi = allVals[Math.floor(allVals.length * 0.98)];
+
     document.getElementById('map-loading').style.display = 'none';
     drawMap();
     drawMapLegend();
@@ -810,9 +820,8 @@ function drawMap() {
   // Filter + color scale
   const cells  = mapSt.data.filter(d => d.scenario === mapSt.scenario && d.year === mapSt.year);
   const vals   = cells.map(d => d.anomaly).filter(isFinite);
-  const sorted = [...vals].sort((a, b) => a - b);
-  const lo = Math.max(0, sorted[Math.floor(sorted.length * 0.02)]);
-  const hi = sorted[Math.floor(sorted.length * 0.98)];
+  const lo = mapSt.globalLo;
+  const hi = mapSt.globalHi;
   mapColorScale.domain([lo, hi]);
   drawMapLegend(lo, hi);
 
