@@ -1,0 +1,998 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Climate Futures: CMIP6 Scenario Explorer</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --surface2: #1c2330;
+      --border: rgba(255,255,255,0.08);
+      --text: #e6edf3;
+      --muted: #7d8590;
+      --hist: #8b949e;
+      --s245: #58a6ff;
+      --s585: #f85149;
+      --accent: #3fb950;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 300;
+      min-height: 100vh;
+    }
+
+    header {
+      border-bottom: 1px solid var(--border);
+      padding: 2.5rem 3rem 2rem;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    header h1 {
+      font-family: 'DM Serif Display', serif;
+      font-size: 2.4rem;
+      font-weight: 400;
+      letter-spacing: -0.5px;
+      line-height: 1.15;
+      margin-bottom: 0.5rem;
+    }
+
+    header p.subtitle {
+      color: var(--muted);
+      font-size: 0.95rem;
+      max-width: 620px;
+      line-height: 1.6;
+    }
+
+    .tag {
+      display: inline-block;
+      font-size: 0.72rem;
+      font-weight: 500;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--accent);
+      border: 1px solid rgba(63,185,80,0.3);
+      border-radius: 3px;
+      padding: 2px 8px;
+      margin-bottom: 1rem;
+    }
+
+    main {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 2rem 3rem 4rem;
+    }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1rem 1.25rem;
+    }
+
+    .card .label {
+      font-size: 0.75rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 6px;
+    }
+
+    .card .value {
+      font-size: 1.8rem;
+      font-weight: 500;
+      line-height: 1;
+    }
+
+    .card .delta {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+
+    .controls {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 1.5rem;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 1.5rem;
+    }
+
+    .control-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .control-group label {
+      font-size: 0.8rem;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    .control-group span.val {
+      font-size: 0.82rem;
+      font-weight: 500;
+      min-width: 36px;
+    }
+
+    input[type=range] {
+      -webkit-appearance: none;
+      appearance: none;
+      height: 4px;
+      border-radius: 2px;
+      background: var(--surface2);
+      outline: none;
+      width: 110px;
+      cursor: pointer;
+    }
+
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--text);
+      cursor: pointer;
+    }
+
+    .toggles {
+      display: flex;
+      gap: 1rem;
+      margin-left: auto;
+    }
+
+    .toggle-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      padding: 5px 12px;
+      cursor: pointer;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.8rem;
+      color: var(--muted);
+      transition: all 0.15s;
+    }
+
+    .toggle-btn.active { border-color: currentColor; }
+    .toggle-btn.active.hist { color: var(--hist); }
+    .toggle-btn.active.s245 { color: var(--s245); }
+    .toggle-btn.active.s585 { color: var(--s585); }
+
+    .toggle-btn .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: currentColor;
+      flex-shrink: 0;
+    }
+
+    .chart-wrap {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.5rem;
+      position: relative;
+    }
+
+    .chart-title {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-bottom: 1rem;
+      letter-spacing: 0.04em;
+    }
+
+    svg text { font-family: 'DM Sans', sans-serif; }
+
+    .tooltip {
+      position: absolute;
+      background: #0d1117;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px 14px;
+      font-size: 0.8rem;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.1s;
+      z-index: 10;
+      min-width: 180px;
+    }
+
+    .tooltip .t-year {
+      font-weight: 500;
+      margin-bottom: 6px;
+      color: var(--text);
+    }
+
+    .tooltip .t-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      color: var(--muted);
+      margin: 2px 0;
+    }
+
+    .tooltip .t-row span:last-child { font-weight: 500; color: var(--text); }
+
+    .annotation-line {
+      stroke: rgba(255,255,255,0.15);
+      stroke-dasharray: 4,3;
+    }
+
+    .annotation-label {
+      fill: var(--muted);
+      font-size: 11px;
+    }
+
+    .paris-line {
+      stroke: rgba(63,185,80,0.4);
+      stroke-dasharray: 6,3;
+    }
+
+    .paris-label {
+      fill: var(--accent);
+      font-size: 10px;
+      opacity: 0.7;
+    }
+
+    /* Writeup */
+    .writeup {
+      margin-top: 3rem;
+      border-top: 1px solid var(--border);
+      padding-top: 2.5rem;
+    }
+
+    .writeup h2 {
+      font-family: 'DM Serif Display', serif;
+      font-weight: 400;
+      font-size: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .writeup h3 {
+      font-size: 0.85rem;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--accent);
+      margin: 1.5rem 0 0.6rem;
+    }
+
+    .writeup p {
+      color: #adbac7;
+      font-size: 0.95rem;
+      line-height: 1.75;
+      max-width: 720px;
+      margin-bottom: 0.75rem;
+    }
+
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 1.5rem 3rem;
+      max-width: 1100px;
+      margin: 0 auto;
+      color: var(--muted);
+      font-size: 0.8rem;
+    }
+
+    @media (max-width: 700px) {
+      header, main, footer { padding-left: 1.25rem; padding-right: 1.25rem; }
+      .cards { grid-template-columns: repeat(2, 1fr); }
+      .toggles { margin-left: 0; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="tag">CMIP6 · IPSL-CM6A-LR · DSC106 Project 3</div>
+  <h1>Climate Futures</h1>
+  <p class="subtitle">How does global mean temperature diverge across emission scenarios from 1850 through 2100 — and what does our choice of pathway mean for the planet?</p>
+</header>
+
+<main>
+  <div class="cards">
+    <div class="card">
+      <div class="label">Baseline (1850)</div>
+      <div class="value" style="color:var(--hist)">12.6°C</div>
+      <div class="delta">pre-industrial reference</div>
+    </div>
+    <div class="card">
+      <div class="label">Historical peak (2014)</div>
+      <div class="value" style="color:var(--hist)">14.1°C</div>
+      <div class="delta">+1.5°C above baseline</div>
+    </div>
+    <div class="card">
+      <div class="label">SSP2-4.5 in 2100</div>
+      <div class="value" style="color:var(--s245)">16.8°C</div>
+      <div class="delta">moderate emissions</div>
+    </div>
+    <div class="card">
+      <div class="label">SSP5-8.5 in 2100</div>
+      <div class="value" style="color:var(--s585)">19.6°C</div>
+      <div class="delta">high emissions worst-case</div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <div class="control-group">
+      <label>Start year</label>
+      <input type="range" id="sl-start" min="1850" max="2099" value="1850" step="1">
+      <span class="val" id="lbl-start">1850</span>
+    </div>
+    <div class="control-group">
+      <label>End year</label>
+      <input type="range" id="sl-end" min="1851" max="2100" value="2100" step="1">
+      <span class="val" id="lbl-end">2100</span>
+    </div>
+    <div class="toggles">
+      <button class="toggle-btn active hist" data-s="historical">
+        <span class="dot"></span> Historical
+      </button>
+      <button class="toggle-btn active s245" data-s="ssp245">
+        <span class="dot"></span> SSP2-4.5
+      </button>
+      <button class="toggle-btn active s585" data-s="ssp585">
+        <span class="dot"></span> SSP5-8.5
+      </button>
+    </div>
+  </div>
+
+  <div class="chart-wrap">
+    <div class="chart-title">Global mean near-surface air temperature (°C) · Annual mean · Area-weighted · Source: IPSL-CM6A-LR via CMIP6/Google Cloud</div>
+    <div id="chart" style="position:relative;">
+      <div class="tooltip" id="tooltip">
+        <div class="t-year" id="tt-year"></div>
+        <div class="t-row" id="tt-hist"><span>Historical</span><span></span></div>
+        <div class="t-row" id="tt-245"><span>SSP2-4.5</span><span></span></div>
+        <div class="t-row" id="tt-585"><span>SSP5-8.5</span><span></span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Writeup -->
+  <div class="writeup">
+    <h2>Design &amp; Process</h2>
+
+    <h3>Motivation</h3>
+    <p>Climate change is one of the most consequential issues of our time, yet the raw model output from CMIP6 is inaccessible to most people. Our goal was to distill 250 years of climate projections into a single interactive graphic that makes the stakes of different emission pathways immediately legible — without requiring any scientific background.</p>
+    <p>Our central question: <em>How does global mean temperature diverge across emission scenarios from 1850 through 2100, and what does our choice of pathway mean for the planet?</em></p>
+
+    <h3>Visual Encodings</h3>
+    <p>We used position along a common y-axis to encode temperature — the most perceptually accurate channel for quantitative data. Time runs left to right on the x-axis, following the natural reading direction of temporal narratives. Each scenario is encoded with both color and line dash pattern so they are distinguishable without relying on color alone. The vertical annotation at 2015 marks the historical/future boundary, and the horizontal Paris Agreement reference lines at +1.5°C and +2.0°C anomaly give users an immediate policy anchor.</p>
+    <p>We considered a filled area chart, but found the overlapping fills obscured the individual trajectories. A small-multiples approach was considered but would have hidden the divergence between scenarios, which is the core story. The line chart with toggles keeps all scenarios comparable on the same scale.</p>
+
+    <h3>Interaction Design</h3>
+    <p>We included four interactions: scenario toggles let users isolate individual pathways; year-range sliders enable zooming into any time window (e.g. 1980–2050 to focus on the modern era); hover tooltips provide exact values on demand without cluttering the chart permanently; and the annotation layer draws attention to the Paris Agreement thresholds that a static plot alone could not make contextually meaningful in this way.</p>
+    <p>These interactions were chosen because the most interesting discoveries — the moment SSP5-8.5 diverges sharply from SSP2-4.5 around 2040, and the fact that even the moderate scenario surpasses 2°C warming — are only visible when users can zoom in and isolate specific lines.</p>
+
+    <h3>Data Transformations</h3>
+    <p>Raw CMIP6 data was accessed via the NOAA public Google Cloud bucket using the IPSL-CM6A-LR model (member r1i1p1f1, grid gr). Monthly atmospheric temperature (variable: tas, table: Amon) was loaded using xarray, area-weighted by cosine of latitude to account for smaller grid cells near the poles, then resampled to annual means. Temperature was converted from Kelvin to Celsius. Three scenarios were processed: historical (1850–2014), SSP2-4.5 (2015–2100), and SSP5-8.5 (2015–2100).</p>
+
+    <h3>Development Process</h3>
+    <p>The project was completed by a team of four. Data extraction and preprocessing in Python/xarray was handled by one member. Exploratory analysis including regional warming trajectories and compound risk scatter plots was completed by another. The D3.js visualization and page design was built by a third member, and the write-up and checkpoint video were coordinated by the fourth.</p>
+    <p>Total estimated effort: approximately 18–22 person-hours. The most time-consuming aspect was data preprocessing — understanding the CMIP6 zarr file structure, selecting the right model with all three scenarios available, and computing the area-weighted mean correctly took several hours of debugging. Building the D3 chart with smooth interactions and correct axis behavior took another significant portion of time.</p>
+  </div>
+</main>
+
+<footer>
+  DSC 106 Project 3 · UC San Diego · Data: CMIP6 via NOAA/Google Cloud · Model: IPSL-CM6A-LR
+</footer>
+
+<script>
+const CSV = `year,scenario,tas_celsius
+1850,historical,12.607056
+1851,historical,12.788422
+1852,historical,12.77771
+1853,historical,12.852295
+1854,historical,12.947266
+1855,historical,12.858368
+1856,historical,12.983765
+1857,historical,12.941956
+1858,historical,12.8784485
+1859,historical,12.9953
+1860,historical,12.829498
+1861,historical,13.009888
+1862,historical,12.613892
+1863,historical,12.7430725
+1864,historical,12.841522
+1865,historical,12.952881
+1866,historical,13.083801
+1867,historical,12.937744
+1868,historical,12.796936
+1869,historical,12.740356
+1870,historical,12.86676
+1871,historical,12.952759
+1872,historical,13.063568
+1873,historical,13.0633545
+1874,historical,12.972565
+1875,historical,12.878723
+1876,historical,12.9973755
+1877,historical,13.006989
+1878,historical,12.896881
+1879,historical,12.824829
+1880,historical,12.908417
+1881,historical,12.810669
+1882,historical,12.654449
+1883,historical,12.5659485
+1884,historical,12.417633
+1885,historical,12.493683
+1886,historical,12.632751
+1887,historical,12.572876
+1888,historical,12.575989
+1889,historical,12.566589
+1890,historical,12.785889
+1891,historical,12.644836
+1892,historical,12.856445
+1893,historical,12.6596985
+1894,historical,12.819611
+1895,historical,12.944214
+1896,historical,12.737122
+1897,historical,12.804443
+1898,historical,12.805603
+1899,historical,12.951233
+1900,historical,12.997131
+1901,historical,12.850403
+1902,historical,12.834351
+1903,historical,12.832764
+1904,historical,12.7901
+1905,historical,12.735168
+1906,historical,12.729248
+1907,historical,12.718964
+1908,historical,12.928925
+1909,historical,12.933044
+1910,historical,12.92691
+1911,historical,12.972504
+1912,historical,12.898376
+1913,historical,12.742798
+1914,historical,12.765442
+1915,historical,12.925934
+1916,historical,13.078339
+1917,historical,12.921753
+1918,historical,12.895782
+1919,historical,12.789215
+1920,historical,12.942505
+1921,historical,13.08139
+1922,historical,12.729553
+1923,historical,12.6604
+1924,historical,12.940186
+1925,historical,12.856934
+1926,historical,12.96814
+1927,historical,12.860596
+1928,historical,12.931061
+1929,historical,13.059021
+1930,historical,12.907684
+1931,historical,12.773987
+1932,historical,12.971985
+1933,historical,13.074829
+1934,historical,13.086365
+1935,historical,12.973328
+1936,historical,13.053833
+1937,historical,13.227783
+1938,historical,13.169312
+1939,historical,13.020599
+1940,historical,12.956909
+1941,historical,13.099731
+1942,historical,13.354065
+1943,historical,13.30127
+1944,historical,13.159668
+1945,historical,13.166687
+1946,historical,13.095154
+1947,historical,13.189331
+1948,historical,13.2873535
+1949,historical,13.215607
+1950,historical,13.080383
+1951,historical,13.236938
+1952,historical,13.383362
+1953,historical,13.264374
+1954,historical,13.147064
+1955,historical,13.274994
+1956,historical,13.316772
+1957,historical,13.420685
+1958,historical,13.446075
+1959,historical,13.204376
+1960,historical,13.297516
+1961,historical,13.306549
+1962,historical,13.531128
+1963,historical,13.335846
+1964,historical,13.223633
+1965,historical,13.268158
+1966,historical,13.276428
+1967,historical,13.294342
+1968,historical,13.299927
+1969,historical,13.37616
+1970,historical,13.181671
+1971,historical,13.217468
+1972,historical,13.357086
+1973,historical,13.507599
+1974,historical,13.253693
+1975,historical,13.228973
+1976,historical,13.388763
+1977,historical,13.378082
+1978,historical,13.33609
+1979,historical,13.409637
+1980,historical,13.563293
+1981,historical,13.461578
+1982,historical,13.187866
+1983,historical,13.04126
+1984,historical,13.199738
+1985,historical,13.103149
+1986,historical,13.408722
+1987,historical,13.652863
+1988,historical,13.8637085
+1989,historical,14.008179
+1990,historical,13.586548
+1991,historical,13.500488
+1992,historical,13.407379
+1993,historical,13.452301
+1994,historical,13.517242
+1995,historical,13.72644
+1996,historical,13.818176
+1997,historical,13.743683
+1998,historical,13.644043
+1999,historical,13.736176
+2000,historical,13.831024
+2001,historical,13.733582
+2002,historical,13.640991
+2003,historical,13.736511
+2004,historical,13.7352295
+2005,historical,14.027069
+2006,historical,14.043945
+2007,historical,13.785065
+2008,historical,13.871277
+2009,historical,14.287842
+2010,historical,14.337494
+2011,historical,13.961182
+2012,historical,14.205994
+2013,historical,14.177307
+2014,historical,14.052185
+2015,ssp245,13.991455
+2016,ssp245,14.070587
+2017,ssp245,14.447632
+2018,ssp245,14.390076
+2019,ssp245,14.320923
+2020,ssp245,14.389801
+2021,ssp245,14.409546
+2022,ssp245,14.264343
+2023,ssp245,14.317657
+2024,ssp245,14.5512085
+2025,ssp245,14.613342
+2026,ssp245,14.720154
+2027,ssp245,14.591095
+2028,ssp245,14.524353
+2029,ssp245,14.590942
+2030,ssp245,14.483826
+2031,ssp245,14.656464
+2032,ssp245,14.954102
+2033,ssp245,14.802551
+2034,ssp245,14.777954
+2035,ssp245,14.697632
+2036,ssp245,14.943207
+2037,ssp245,15.040405
+2038,ssp245,14.844879
+2039,ssp245,15.114685
+2040,ssp245,15.391266
+2041,ssp245,15.174652
+2042,ssp245,15.030579
+2043,ssp245,15.092682
+2044,ssp245,14.981903
+2045,ssp245,15.166229
+2046,ssp245,15.346588
+2047,ssp245,15.48645
+2048,ssp245,15.410095
+2049,ssp245,15.377228
+2050,ssp245,15.407196
+2051,ssp245,15.190216
+2052,ssp245,15.408112
+2053,ssp245,15.734802
+2054,ssp245,15.729858
+2055,ssp245,15.558289
+2056,ssp245,15.339661
+2057,ssp245,15.567505
+2058,ssp245,15.677155
+2059,ssp245,15.550537
+2060,ssp245,15.707581
+2061,ssp245,15.74057
+2062,ssp245,15.838013
+2063,ssp245,15.807037
+2064,ssp245,15.753815
+2065,ssp245,15.668762
+2066,ssp245,15.867065
+2067,ssp245,16.065979
+2068,ssp245,16.112122
+2069,ssp245,15.844635
+2070,ssp245,15.820404
+2071,ssp245,16.01471
+2072,ssp245,16.039062
+2073,ssp245,16.351837
+2074,ssp245,16.090881
+2075,ssp245,16.012024
+2076,ssp245,16.310028
+2077,ssp245,16.243317
+2078,ssp245,16.192596
+2079,ssp245,16.109314
+2080,ssp245,16.03006
+2081,ssp245,16.071869
+2082,ssp245,16.184265
+2083,ssp245,16.337006
+2084,ssp245,16.489868
+2085,ssp245,16.537537
+2086,ssp245,16.501892
+2087,ssp245,16.292297
+2088,ssp245,16.29535
+2089,ssp245,16.365509
+2090,ssp245,16.63971
+2091,ssp245,16.640625
+2092,ssp245,16.41977
+2093,ssp245,16.403961
+2094,ssp245,16.487732
+2095,ssp245,16.535583
+2096,ssp245,16.705017
+2097,ssp245,16.70996
+2098,ssp245,16.355865
+2099,ssp245,16.396881
+2100,ssp245,16.763275
+2015,ssp585,14.161621
+2016,ssp585,14.494934
+2017,ssp585,14.625427
+2018,ssp585,14.3550415
+2019,ssp585,14.323334
+2020,ssp585,14.335541
+2021,ssp585,14.533447
+2022,ssp585,14.286407
+2023,ssp585,14.336945
+2024,ssp585,14.395477
+2025,ssp585,14.442596
+2026,ssp585,14.46579
+2027,ssp585,14.572357
+2028,ssp585,14.747772
+2029,ssp585,14.933685
+2030,ssp585,14.850098
+2031,ssp585,14.548096
+2032,ssp585,14.521545
+2033,ssp585,14.498718
+2034,ssp585,14.631195
+2035,ssp585,14.614563
+2036,ssp585,14.778503
+2037,ssp585,14.770782
+2038,ssp585,15.095154
+2039,ssp585,15.058655
+2040,ssp585,14.990723
+2041,ssp585,15.15448
+2042,ssp585,15.287323
+2043,ssp585,15.5008545
+2044,ssp585,15.623047
+2045,ssp585,15.52063
+2046,ssp585,15.481873
+2047,ssp585,15.658508
+2048,ssp585,15.757568
+2049,ssp585,15.665222
+2050,ssp585,15.802856
+2051,ssp585,15.8376465
+2052,ssp585,15.995117
+2053,ssp585,16.038116
+2054,ssp585,16.010376
+2055,ssp585,16.031738
+2056,ssp585,16.340515
+2057,ssp585,16.30014
+2058,ssp585,16.319
+2059,ssp585,16.2453
+2060,ssp585,16.4068
+2061,ssp585,16.272705
+2062,ssp585,16.404785
+2063,ssp585,16.650452
+2064,ssp585,16.683258
+2065,ssp585,16.681976
+2066,ssp585,16.958801
+2067,ssp585,16.919434
+2068,ssp585,16.961914
+2069,ssp585,17.00586
+2070,ssp585,17.191803
+2071,ssp585,17.39209
+2072,ssp585,17.323303
+2073,ssp585,17.260986
+2074,ssp585,17.379974
+2075,ssp585,17.268738
+2076,ssp585,17.452057
+2077,ssp585,17.594757
+2078,ssp585,17.790924
+2079,ssp585,17.845764
+2080,ssp585,18.19635
+2081,ssp585,18.381622
+2082,ssp585,18.011719
+2083,ssp585,18.162933
+2084,ssp585,18.347015
+2085,ssp585,18.177338
+2086,ssp585,18.428894
+2087,ssp585,18.700073
+2088,ssp585,18.651031
+2089,ssp585,18.842773
+2090,ssp585,18.962952
+2091,ssp585,18.913513
+2092,ssp585,18.922089
+2093,ssp585,18.890411
+2094,ssp585,18.982697
+2095,ssp585,19.258698
+2096,ssp585,19.37143
+2097,ssp585,19.257477
+2098,ssp585,19.49353
+2099,ssp585,19.732819
+2100,ssp585,19.569641`;
+
+const rows = d3.csvParse(CSV, d => ({
+  year: +d.year,
+  scenario: d.scenario,
+  tas: +d.tas_celsius
+}));
+
+const baseline = d3.mean(rows.filter(r => r.scenario === 'historical' && r.year <= 1900), r => r.tas);
+rows.forEach(r => r.anomaly = r.tas - baseline);
+
+const byS = s => rows.filter(r => r.scenario === s);
+const COLORS = { historical: '#8b949e', ssp245: '#58a6ff', ssp585: '#f85149' };
+const DASH = { historical: '0', ssp245: '6,3', ssp585: '2,2' };
+const LABELS = { historical: 'Historical', ssp245: 'SSP2-4.5 (moderate)', ssp585: 'SSP5-8.5 (high emissions)' };
+
+const margin = { top: 20, right: 40, bottom: 50, left: 58 };
+let W, H, svg, xScale, yScale, chartG, clipId;
+let state = { start: 1850, end: 2100, visible: { historical: true, ssp245: true, ssp585: true } };
+
+function getFiltered() {
+  return rows.filter(r => r.year >= state.start && r.year <= state.end && state.visible[r.scenario]);
+}
+
+function initChart() {
+  const container = document.getElementById('chart');
+  container.querySelectorAll('svg').forEach(s => s.remove());
+  W = container.clientWidth - margin.left - margin.right;
+  H = Math.max(340, Math.min(460, window.innerHeight * 0.45)) - margin.top - margin.bottom;
+  clipId = 'clip-' + Date.now();
+
+  svg = d3.select(container).append('svg')
+    .attr('width', W + margin.left + margin.right)
+    .attr('height', H + margin.top + margin.bottom);
+
+  svg.append('defs').append('clipPath').attr('id', clipId)
+    .append('rect').attr('width', W).attr('height', H + 10).attr('y', -5);
+
+  chartG = svg.append('g').attr('transform', `translate(${margin.left},${margin.top})`);
+
+  xScale = d3.scaleLinear().domain([state.start, state.end]).range([0, W]);
+  yScale = d3.scaleLinear().domain([11.5, 20.5]).range([H, 0]);
+
+  // Grid
+  chartG.append('g').attr('class', 'grid-y')
+    .selectAll('line')
+    .data(yScale.ticks(8))
+    .join('line')
+    .attr('x1', 0).attr('x2', W)
+    .attr('y1', d => yScale(d)).attr('y2', d => yScale(d))
+    .attr('stroke', 'rgba(255,255,255,0.05)');
+
+  // Axes
+  const xAxis = chartG.append('g').attr('class', 'x-axis').attr('transform', `translate(0,${H})`);
+  const yAxis = chartG.append('g').attr('class', 'y-axis');
+
+  function styleAxis(g) {
+    g.select('.domain').remove();
+    g.selectAll('tick line').attr('stroke', 'rgba(255,255,255,0.1)');
+    g.selectAll('text').attr('fill', '#7d8590').attr('font-size', '11px').attr('font-family', 'DM Sans');
+  }
+
+  xAxis.call(d3.axisBottom(xScale).tickFormat(d3.format('d')).ticks(8));
+  yAxis.call(d3.axisLeft(yScale).tickFormat(d => d.toFixed(1) + '°C').ticks(8));
+  styleAxis(xAxis); styleAxis(yAxis);
+
+  // Y axis label
+  chartG.append('text')
+    .attr('transform', 'rotate(-90)')
+    .attr('x', -H / 2).attr('y', -44)
+    .attr('text-anchor', 'middle')
+    .attr('fill', '#7d8590')
+    .attr('font-size', '11px')
+    .attr('font-family', 'DM Sans')
+    .text('Global mean temperature (°C)');
+
+  // Paris Agreement lines (anomaly-based, converted to absolute)
+  const paris15 = baseline + 1.5;
+  const paris20 = baseline + 2.0;
+
+  if (paris15 >= 11.5 && paris15 <= 20.5) {
+    chartG.append('line').attr('class', 'paris-line')
+      .attr('x1', 0).attr('x2', W)
+      .attr('y1', yScale(paris15)).attr('y2', yScale(paris15))
+      .attr('stroke', 'rgba(63,185,80,0.35)').attr('stroke-dasharray', '6,3');
+    chartG.append('text').attr('class', 'paris-label')
+      .attr('x', W - 4).attr('y', yScale(paris15) - 4)
+      .attr('text-anchor', 'end').attr('fill', '#3fb950').attr('font-size', '10px').attr('font-family', 'DM Sans')
+      .text('Paris +1.5°C');
+  }
+  if (paris20 >= 11.5 && paris20 <= 20.5) {
+    chartG.append('line').attr('class', 'paris-line')
+      .attr('x1', 0).attr('x2', W)
+      .attr('y1', yScale(paris20)).attr('y2', yScale(paris20))
+      .attr('stroke', 'rgba(63,185,80,0.25)').attr('stroke-dasharray', '6,3');
+    chartG.append('text').attr('class', 'paris-label')
+      .attr('x', W - 4).attr('y', yScale(paris20) - 4)
+      .attr('text-anchor', 'end').attr('fill', '#3fb950').attr('font-size', '10px').attr('font-family', 'DM Sans')
+      .text('Paris +2.0°C');
+  }
+
+  // Historical/future split line
+  if (2015 >= state.start && 2015 <= state.end) {
+    const splitX = xScale(2015);
+    chartG.append('line')
+      .attr('x1', splitX).attr('x2', splitX)
+      .attr('y1', 0).attr('y2', H)
+      .attr('stroke', 'rgba(255,255,255,0.12)').attr('stroke-dasharray', '4,3');
+    chartG.append('text')
+      .attr('x', splitX + 4).attr('y', 14)
+      .attr('fill', '#7d8590').attr('font-size', '10px').attr('font-family', 'DM Sans')
+      .text('projections →');
+  }
+
+  // Lines group with clip
+  const linesG = chartG.append('g').attr('clip-path', `url(#${clipId})`);
+
+  ['historical', 'ssp245', 'ssp585'].forEach(s => {
+    linesG.append('path')
+      .attr('class', 'line-' + s)
+      .attr('fill', 'none')
+      .attr('stroke', COLORS[s])
+      .attr('stroke-width', s === 'historical' ? 1.5 : 2)
+      .attr('stroke-dasharray', DASH[s])
+      .attr('opacity', state.visible[s] ? 1 : 0);
+  });
+
+  // Hover overlay
+  const bisect = d3.bisector(d => d.year).left;
+  const tooltip = document.getElementById('tooltip');
+  const ttYear = document.getElementById('tt-year');
+  const ttHist = document.getElementById('tt-hist');
+  const tt245 = document.getElementById('tt-245');
+  const tt585 = document.getElementById('tt-585');
+
+  const hoverLine = chartG.append('line')
+    .attr('y1', 0).attr('y2', H)
+    .attr('stroke', 'rgba(255,255,255,0.15)')
+    .attr('stroke-width', 1)
+    .attr('opacity', 0);
+
+  const overlay = chartG.append('rect')
+    .attr('width', W).attr('height', H)
+    .attr('fill', 'none')
+    .attr('pointer-events', 'all')
+    .style('cursor', 'crosshair');
+
+  function showTooltip(event) {
+    const [mx] = d3.pointer(event);
+    const year = Math.round(xScale.invert(mx));
+    if (year < state.start || year > state.end) return;
+
+    hoverLine.attr('x1', xScale(year)).attr('x2', xScale(year)).attr('opacity', 1);
+
+    const hRow = byS('historical').find(r => r.year === year);
+    const s245Row = byS('ssp245').find(r => r.year === year);
+    const s585Row = byS('ssp585').find(r => r.year === year);
+
+    ttYear.textContent = `Year ${year}`;
+    ttHist.children[1].textContent = hRow ? hRow.tas.toFixed(2) + '°C' : '—';
+    tt245.children[1].textContent = s245Row ? s245Row.tas.toFixed(2) + '°C' : '—';
+    tt585.children[1].textContent = s585Row ? s585Row.tas.toFixed(2) + '°C' : '—';
+
+    ttHist.style.display = state.visible.historical ? 'flex' : 'none';
+    tt245.style.display = state.visible.ssp245 ? 'flex' : 'none';
+    tt585.style.display = state.visible.ssp585 ? 'flex' : 'none';
+
+    const svgRect = svg.node().getBoundingClientRect();
+    const chartRect = document.getElementById('chart').getBoundingClientRect();
+    const relX = mx + margin.left;
+    const flipLeft = relX > W * 0.65;
+    tooltip.style.left = flipLeft ? (relX - 200) + 'px' : (relX + 16) + 'px';
+    tooltip.style.top = (margin.top + 10) + 'px';
+    tooltip.style.opacity = '1';
+  }
+
+  overlay.on('mousemove', showTooltip)
+    .on('mouseleave', () => {
+      tooltip.style.opacity = '0';
+      hoverLine.attr('opacity', 0);
+    });
+
+  drawLines();
+}
+
+function drawLines() {
+  const lineGen = scenario => d3.line()
+    .x(d => xScale(d.year))
+    .y(d => yScale(d.tas))
+    .defined(d => d.tas != null)
+    .curve(d3.curveCatmullRom.alpha(0.5));
+
+  ['historical', 'ssp245', 'ssp585'].forEach(s => {
+    const data = byS(s).filter(r => r.year >= state.start && r.year <= state.end);
+    chartG.select('.line-' + s)
+      .datum(data)
+      .attr('d', lineGen(s))
+      .attr('opacity', state.visible[s] ? 1 : 0);
+  });
+
+  // Update x axis
+  xScale.domain([state.start, state.end]);
+  chartG.select('.x-axis')
+    .call(d3.axisBottom(xScale).tickFormat(d3.format('d')).ticks(8));
+  chartG.select('.x-axis').select('.domain').remove();
+  chartG.select('.x-axis').selectAll('text')
+    .attr('fill', '#7d8590').attr('font-size', '11px').attr('font-family', 'DM Sans');
+
+  // Redraw split line
+  chartG.selectAll('.split-line').remove();
+  if (2015 >= state.start && 2015 <= state.end) {
+    chartG.insert('line', '.line-historical')
+      .attr('class', 'split-line')
+      .attr('x1', xScale(2015)).attr('x2', xScale(2015))
+      .attr('y1', 0).attr('y2', H)
+      .attr('stroke', 'rgba(255,255,255,0.12)').attr('stroke-dasharray', '4,3');
+  }
+}
+
+// Sliders
+const slStart = document.getElementById('sl-start');
+const slEnd = document.getElementById('sl-end');
+const lblStart = document.getElementById('lbl-start');
+const lblEnd = document.getElementById('lbl-end');
+
+slStart.addEventListener('input', () => {
+  if (+slStart.value >= +slEnd.value) slStart.value = +slEnd.value - 1;
+  state.start = +slStart.value;
+  lblStart.textContent = slStart.value;
+  drawLines();
+});
+
+slEnd.addEventListener('input', () => {
+  if (+slEnd.value <= +slStart.value) slEnd.value = +slStart.value + 1;
+  state.end = +slEnd.value;
+  lblEnd.textContent = slEnd.value;
+  drawLines();
+});
+
+// Toggle buttons
+document.querySelectorAll('.toggle-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const s = btn.dataset.s;
+    state.visible[s] = !state.visible[s];
+    btn.classList.toggle('active', state.visible[s]);
+    drawLines();
+  });
+});
+
+// Init
+initChart();
+window.addEventListener('resize', () => initChart());
+</script>
+</body>
+</html>
