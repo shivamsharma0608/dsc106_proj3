@@ -108,7 +108,7 @@
 <header>
   <div class="tag">CMIP6 · IPSL-CM6A-LR · DSC106 Project 3</div>
   <h1>Climate Futures</h1>
-  <p class="subtitle">How does global mean temperature diverge across emission scenarios from 1850 through 2100 — and what does our choice of pathway mean for the planet?</p>
+  <p class="subtitle">How does global mean temperature diverge across emission scenarios from 1850 through 2100, and what does our choice of pathway mean for the planet?</p>
 </header>
 
 <main>
@@ -211,21 +211,21 @@
     <h2>Design &amp; Process</h2>
 
     <h3>Motivation</h3>
-    <p>Climate change is one of the most consequential issues of our time, yet the raw model output from CMIP6 is inaccessible to most people. Our goal was to distill 250 years of climate projections into interactive graphics that make the stakes of different emission pathways immediately legible — without requiring any scientific background.</p>
+    <p>Climate change is one of the most consequential issues of our time, yet the raw model output from CMIP6 is inaccessible to most people. Our goal was to distill 250 years of climate projections into interactive graphics that make the stakes of different emission pathways immediately legible, without requiring any scientific background.</p>
     <p>Our central question: <em>How does global mean temperature diverge across emission scenarios from 1850 through 2100, and which regions face the most extreme warming?</em></p>
 
     <h3>Visual Encodings</h3>
-    <p>The time series uses position along a common y-axis to encode temperature — the most perceptually accurate channel for quantitative data. Each scenario uses both color and line dash so they are distinguishable without relying on color alone. The Paris Agreement reference lines at +1.5°C and +2.0°C give users an immediate policy anchor.</p>
-    <p>The spatial map encodes warming anomaly with a sequential yellow-orange-red color scale, chosen because all projected values are positive and the warm palette aligns intuitively with heat. Grid cells are rendered as correctly projected GeoJSON polygons so polar regions display without distortion. Country borders are overlaid to aid geographic orientation. We considered a country-level choropleth but it would have hidden within-country variation (e.g., Arctic vs. temperate Canada).</p>
+    <p>The time series uses position along a common y-axis to encode temperature, the most perceptually accurate channel for quantitative data. Each scenario uses both color and line dash so they are distinguishable without relying on color alone. The Paris Agreement reference lines at +1.5°C and +2.0°C give users an immediate policy anchor.</p>
+    <p>The spatial map encodes warming anomaly with a sequential yellow-orange-red color scale, chosen because all projected values are positive and the warm palette aligns intuitively with heat. Grid cells are rendered as correctly projected GeoJSON polygons so polar regions display without distortion. Country borders are overlaid to aid geographic orientation. We considered a country level choropleth but it would have hidden within-country variation (e.g., Arctic vs. temperate Canada).</p>
 
     <h3>Interaction Design</h3>
-    <p>We included five interactions: (1) scenario toggles let users isolate pathways in the time series; (2) year-range sliders enable zooming into any time window; (3) hover tooltips provide exact values without permanent clutter; (4) the map's year buttons jump to key milestones (2030, 2050, 2070, 2100), making the acceleration of warming visible; (5) the map's scenario toggle lets users directly compare moderate vs. high-emission spatial patterns — a comparison the time series cannot show at the regional level. The most striking insight — that Arctic warming under SSP5-8.5 by 2100 exceeds 10°C while tropical regions stay under 4°C — only becomes apparent through the spatial map.</p>
+    <p>We included five interactions: (1) scenario toggles let users isolate pathways in the time series; (2) year-range sliders enable zooming into any time window; (3) hover tooltips provide exact values without permanent clutter; (4) the map's year buttons jump to key milestones (2030, 2050, 2070, 2100), making the acceleration of warming visible; (5) the map's scenario toggle lets users directly compare moderate vs. high-emission spatial patterns, a comparison the time series cannot show at the regional level. The most striking insight, that Arctic warming under SSP5-8.5 by 2100 exceeds 10°C while tropical regions stay under 4°C, only becomes apparent through the spatial map.</p>
 
     <h3>Data Transformations</h3>
-    <p>Raw CMIP6 data was accessed via the NOAA public Google Cloud bucket using the IPSL-CM6A-LR model (member r1i1p1f1, grid gr). Monthly atmospheric temperature (variable: tas, table: Amon) was loaded using xarray, area-weighted by cosine of latitude, resampled to annual means, and converted from Kelvin to Celsius. For the spatial map, grid data was coarsened to 5° resolution and expressed as anomalies relative to the per-cell 1850–1900 baseline, keeping the CSV to ~400 KB suitable for GitHub Pages hosting.</p>
+    <p>Raw CMIP6 data was accessed via the NOAA public Google Cloud bucket using the IPSL CM6A LR model (member r1i1p1f1, grid gr). Monthly atmospheric temperature (variable: tas, table: Amon) was loaded using xarray, area-weighted by cosine of latitude, resampled to annual means, and converted from Kelvin to Celsius. For the spatial map, grid data was coarsened to 5° resolution and expressed as anomalies relative to the per-cell 1850–1900 baseline, keeping the CSV to around 400 KB suitable for GitHub Pages hosting.</p>
 
     <h3>Development Process</h3>
-    <p>The project was completed by a team of four. Data extraction and preprocessing in Python/xarray was handled by one member. Exploratory analysis including regional warming trajectories and compound risk scatter plots was completed by another. The D3.js visualization and page design was built by a third member, and the write-up and checkpoint video were coordinated by the fourth. Total estimated effort: approximately 22–26 person-hours. The most time-consuming aspects were data preprocessing and integrating the spatial map without breaking existing interactions.</p>
+    <p>The project was completed by a team of four. Data extraction and preprocessing in Python/xarray was handled by one member. Exploratory analysis including regional warming trajectories and compound risk scatter plots was completed by another. The D3.js visualization and page design was built by a third member, and the write up and checkpoint video were coordinated by the fourth. Total estimated effort: approximately 22–26 person-hours. The most time consuming aspects were data preprocessing and integrating the spatial map without breaking existing interactions.</p>
   </div>
 </main>
 
