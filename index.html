@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Climate Futures: CMIP6 Scenario Explorer</title>
+  <title>Climate Futures — How hot will Earth get? Exploring CMIP6 warming scenarios through 2100</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/topojson@3/dist/topojson.min.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -62,6 +62,7 @@
     /* ── Chart wrap ── */
     .chart-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 1.5rem; position: relative; }
     .chart-title { font-size: 0.8rem; color: var(--muted); margin-bottom: 1rem; letter-spacing: 0.04em; }
+    .viz-title { font-size: 1rem; font-weight: 500; color: var(--text); line-height: 1.45; margin-bottom: 0.35rem; letter-spacing: -0.01em; }
     svg text { font-family: 'DM Sans', sans-serif; }
 
     /* ── Line chart tooltip ── */
@@ -107,8 +108,8 @@
 
 <header>
   <div class="tag">CMIP6 · IPSL-CM6A-LR · DSC106 Project 3</div>
-  <h1>Climate Futures</h1>
-  <p class="subtitle">How does global mean temperature diverge across emission scenarios from 1850 through 2100, and what does our choice of pathway mean for the planet?</p>
+  <h1>How Hot Will Earth Get?</h1>
+  <p class="subtitle">Exploring 250 years of climate model projections — from the pre-industrial baseline through 2100 — across moderate and high emissions scenarios. Under the worst case, global temperatures could rise nearly 7°C above pre-industrial levels within your lifetime.</p>
 </header>
 
 <main>
@@ -137,8 +138,8 @@
 
   <!-- View tabs -->
   <div class="view-tabs">
-    <button class="tab-btn active" data-view="chart">📈 Time Series</button>
-    <button class="tab-btn"        data-view="map">🗺 Spatial Warming Map</button>
+    <button class="tab-btn active" data-view="chart">Temperature Over Time</button>
+    <button class="tab-btn"        data-view="map">Regional Warming Patterns</button>
   </div>
 
   <!-- Line chart controls -->
@@ -179,6 +180,7 @@
 
   <!-- Line chart -->
   <div class="chart-wrap" id="chart-section">
+    <div class="viz-title">Under high emissions, global temperatures could reach nearly 20°C by 2100</div>
     <div class="chart-title">Global mean near-surface air temperature (°C) · Annual mean · Area-weighted · Source: IPSL-CM6A-LR via CMIP6/Google Cloud</div>
     <div id="chart" style="position:relative;">
       <div class="tooltip" id="tooltip">
@@ -192,6 +194,7 @@
 
   <!-- Spatial map -->
   <div class="chart-wrap" id="map-section" style="display:none">
+    <div class="viz-title">The Arctic warms 3–4× faster than the tropics</div>
     <div class="chart-title" id="map-chart-title">
       Temperature anomaly (°C) vs. 1850–1900 pre-industrial baseline · Source: IPSL-CM6A-LR via CMIP6
     </div>
@@ -211,23 +214,23 @@
     <h2>Design &amp; Process</h2>
 
     <h3>Motivation</h3>
-    <p>Climate change is consistently described as one of the defining challenges of our time, yet for most people it remains extremely abstract — a background concern rather than something they need to address actively. Terms like "1.5°C above pre-industrial levels" appear consistently in headlines, but it's easy to read and simply think that that doesn't sound like that much and it probably wouldn't affect them. It doesn't tell you what the difference between a moderate and a high-emissions future actually looks like on the ground, and at what rate climate change is becoming an issue for people right now rather than future generations.</p>
+    <p>Climate change is consistently described as one of the defining challenges of our time, yet for most people it remains extremely abstract — a background concern rather than something they need to address actively. Phrases like "1.5°C above pre-industrial levels" appear consistently in headlines, but it's easy to read and simply think that that doesn't sound like that much and it probably doesn't affect them. It doesn't tell you what a high emissions future actually looks like on the ground, and at what rate climate change is becoming an issue for people right now rather than future generations.</p>
     <p>Part of the problem is that existing climate data, while extraordinarily detailed, is locked in spaces that most people will never interact with on their own. CMIP6 contains thousands of model simulations spanning centuries of climate history and projection, yet accessing anything that CMIP6 is capable of requires navigating spaces online that simply aren't necessary for the average person. The knowledge exists; the accessibility does not.</p>
-    <p>By building two complementary interactive visualizations — a global time series and a spatial warming map — we hope to make it possible for anyone to directly explore what the planet's temperature trajectory looks like under different emissions scenarios, and to see concretely which regions bear the most extreme consequences. Seeing the SSP5-8.5 line pull away from SSP2-4.5 around 2040 and accelerate toward nearly 20°C by 2100, or watching the Arctic light up deep red on the map while the tropics stay pale yellow, is the kind of direct, comparative insight that simply reading a paragraph of text cannot replicate. Our central question was: how does global mean temperature diverge across emission scenarios from 1850 through 2100, and which regions face the most extreme warming?</p>
+    <p>By building two complementary interactive visualizations — a global time series graph and a corresponding spatial warming map — we hope to make it possible for anyone to directly explore what the planet's temperature trajectory looks like under different emissions scenarios, and to see concretely which regions bear the most extreme consequences. Seeing the SSP5-8.5 line pull away from SSP2-4.5 around 2040 and accelerate toward nearly 20°C by 2100, or watching the Arctic light up deep red on the map, is the kind of direct insight that simply reading a paragraph of text cannot replicate. Our central question was: how does global mean temperature diverge across emission scenarios from 1850 through 2100, and which regions face the most extreme warming?</p>
 
     <h3>Visual Encodings</h3>
-    <p>For the time series we used position on the x-axis along a shared y-axis to encode temperature across different scenarios since it is the most direct and accurate way to show quantitative data comparatively. We also used a different colour and different line dash for each scenario so it is easy to distinguish them from each other, and not just colour alone. We added the Paris Agreement reference lines at +1.5°C and +2.0°C since it gives viewers something concrete to have an anchor or reference to than just watching the lines go up.</p>
-    <p>For the spatial map, we encoded the warming anomaly using a sequential yellow orange red colour scale. This was because all the projected anomaly values are positive so a sequential scale made more sense, as well as using colours that typically people perceive as heat. Furthermore, the grid cells are rendered as projected GeoJSON polygons so polar regions display without too much distortion while still being recognizable. The country borders are overlaid to help with the geographic orientation. Originally we considered going further in detail with a country level choropleth but decided against it since it would have hidden a lot within country variation. Since regional detail is important to show people climate change affects people outside of their environment, we thought that feature was not necessary.</p>
+    <p>For the time series we used position along a shared y-axis to encode temperature across different scenarios since it is the most direct and accurate way to show quantitative data comparatively. The y-axis begins at 11.5°C rather than zero. This was a deliberate choice since temperature has no meaningful zero reference point, and a zero-based axis would compress 165 years of change into a barely visible sliver at the top of the chart. The axis range is fixed across all zoom states so the scale remains consistent as users narrow the time window.</p>
+    <p>For the spatial map, we encoded the warming anomaly using a sequential yellow orange red colour scale. This was because all the projected anomaly values are positive so a sequential scale made more sense, as well as using colours that typically people perceive as heat. Grid cells are painted onto an HTML Canvas layer by projecting each cell's four corner coordinates through the Natural Earth projection directly, which seems to more correctly handle the compression of high-latitude cells and avoids the spherical polygon interpretation issues that arise with SVG paths at climate-data resolutions. The country borders are overlaid to help with the geographic orientation. We chose the Natural Earth projection because it balances area accuracy with recognizability — Mercator dramatically distorts polar regions, which are the most critical areas for this dataset, while Natural Earth keeps both the Arctic and tropics at roughly their correct relative sizes without the extreme distortion of equal-area projections like Mollweide. This does mean the split in the data recordings itself shows very prominently, but we decided to go with it. Originally we considered going further in detail with a country level choropleth but decided against it since it would have hidden a lot within country variation. Since regional detail is important to show people climate change affects people outside of their environment, we thought that feature was not necessary.</p>
 
     <h3>Interaction Design</h3>
     <p>There are a total of 5 interactions we included. First, the scenario toggles let users isolate specific pathways in the time series so they can focus on one at a time. Second, the year range sliders let you zoom into any time window you want so users can focus on a specific period that they care about. Third, the hover tooltips allow the user to hover over and show the exact temperature values without cluttering the chart. Fourth, the year buttons on the map allow you to jump between years like 2030, 2050, 2070, and 2100 which makes the acceleration of the warming more visible. Fifth, the scenario toggle on the map lets the user switch between moderate and high emissions spatial patterns. This is important since on the time series it does not show the patterns on the regional level.</p>
     <p>After playing around with the interactions and the data, the most interesting and striking thing we found was that the Arctic warming under SSP5-8.5 by 2100 is projected to get above 10°C while tropical regions stay below 4°C. Though it might not seem like a big gap, the difference becomes very visible and obvious on the map which was what we were hoping to demonstrate with our charts.</p>
 
     <h3>Data Transformations</h3>
-    <p>To play around with the data, we accessed the raw CMIP6 data through the NOAA public Google Cloud bucket using the IPSL CM6A LR model. We used xarray to load the monthly atmospheric temperature, then area weighted by the cosine of latitude to account for the fact that grid cells get smaller when it is closer to the poles, resampled everything to annual means, and finally converted from Kelvin to Celsius. For the spatial map we decreased the grid down to 5 degree resolution and expressed all values as anomalies relative to each cell’s 1850 to 1900 mean. In the end, the final CSV file was around 400KB which was small enough to host directly on GitHub efficiently.</p>
+    <p>To play around with the data, we accessed the raw CMIP6 data through the NOAA public Google Cloud bucket using the IPSL CM6A LR model. We used xarray to load the monthly atmospheric temperature, then area weighted by the cosine of latitude to account for the fact that grid cells get smaller when it is closer to the poles, resampled everything to annual means, and finally converted from Kelvin to Celsius. For the spatial map we decreased the grid down to 5 degree resolution and expressed all values as anomalies relative to each cell’s 1850 to 1900 mean. In the end, the final CSV file was around 400KB, which was small enough to host directly on GitHub efficiently. For the color scale on the spatial map, we computed a single fixed domain from the 98th percentile of all anomaly values across every year and scenario combined, rather than rescaling per selection. This ensures that 2030 and 2100 are directly visually comparable — a map that looks pale yellow in 2030 and deep red in 2100 honestly communicates the magnitude of change. We selected SSP2-4.5 and SSP5-8.5 specifically because SSP2-4.5 approximates a world with moderate emissions reductions roughly consistent with current national pledges, while SSP5-8.5 represents a high-fossil-fuel baseline with no additional mitigation. They contain a realistic range of futures, making the choice of pathway as legible as possible to a general audience.</p>
 
     <h3>Development Process</h3>
-    <p>We completed this project in a team of 4. One member handled the data extraction and preprocessing in Python using xarray to pull everything from the CMIP6 Google Cloud bucket. Another member ran the exploratory analysis to help figure out what our final question should be by playing with the data and seeing what we can analyze. THe D3 visualization and page design was built by the the third member, and the write up and checkpoint video was done with the fourth member. The most time consuming parts were the data preprocessing and getting the spatial map to integrate properly. As this is still a team effort, we made sure to check in on each other’s progress and help out whenever it was necessary so everyone is on the same page.</p>
+    <p>We completed this project in a team of 4. Jimbo handled the data extraction and preprocessing in Python using xarray to pull everything from the CMIP6 Google Cloud bucket. Luis ran the exploratory analysis to help figure out what our final question should be by playing with the data and seeing what we can analyze. The D3 visualizations and page design was built by the Shivam and Manning, the checkpoint video was done by Luis, with everyone helping contribute to the write up. Total estimated effort was around 26 person-hours across the team. The most time consuming parts were the data preprocessing and getting the spatial map to render correctly — the spatial map in particular went through many iterations to resolve coordinate projection issues before landing on a canvas-based rendering approach. As this is still a team effort, we made sure to check in on each other's progress and help out whenever it was necessary so everyone is on the same page.</p>
   </div>
 </main>
 
@@ -759,7 +762,8 @@ const mapColorScale = d3.scaleSequential(d3.interpolateYlOrRd).domain([0, 10]);
 const mapSt = { 
   scenario: 'ssp585', year: 2050, data: null, world: null, 
   loaded: false, halfDeg: 2.5,
-  globalLo: 0, globalHi: 10 
+  globalLo: 0, globalHi: 10,
+  zoomTransform: null
 };
 
 async function loadMapData() {
@@ -854,6 +858,13 @@ function drawMap() {
     paintSVG(svgG, _mapProjection);
   });
   svg.call(zoom);
+
+  if (mapSt.zoomTransform) {
+    svg.call(zoom.transform, mapSt.zoomTransform);
+  } else {
+    paintCanvas(canvas, cells, _mapProjection, mapSt.halfDeg);
+    paintSVG(svgG, _mapProjection);
+  }
 
   // Initial paint
   paintCanvas(canvas, cells, _mapProjection, mapSt.halfDeg);
